@@ -3,14 +3,14 @@ import numpy as np
 from PIL import Image, ImageOps
 
 class ImageToMask:
-    channels = ["red", "green", "blue", "black only", "white only", "greyscale", "no mask", "mask all"]
+    channels = ["red", "green", "blue", "greyscale", "black only", "white only", "mask everything", "mask nothing"]
 
     @classmethod
     def INPUT_TYPES(s):
         return {
             "required": {
                 "image": ("IMAGE",),
-                "channel": (s.channels, {"default": s.channels[0]}),
+                "channel": (s.channels, {"default": "black only"})
             },
         }
 
@@ -42,7 +42,7 @@ class ImageToMask:
             mask = np.array(ImageOps.grayscale(i).getchannel("L")).astype(np.float32) / 255.0
             mask = 1. - torch.from_numpy(mask)
         # mask everything
-        elif channel == "mask all":
+        elif channel == "mask everything":
             mask = torch.ones((64,64), dtype=torch.float32, device="cpu")
         # mask nothing
         else:
