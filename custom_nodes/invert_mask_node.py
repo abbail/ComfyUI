@@ -17,8 +17,8 @@ class InvertMask:
     CATEGORY = "image"
 
     def invert_mask(self, mask):
-        mask = torch.sub(mask, 1)
-        mask = torch.mul(mask, -1)
+        ones = torch.ones(mask.shape, dtype=torch.float32, device="cpu")
+        mask = torch.sub(ones, mask)
         return (mask,)
 
 NODE_CLASS_MAPPINGS = {
