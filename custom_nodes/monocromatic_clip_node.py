@@ -28,8 +28,9 @@ class MonochromaticClip:
     def monochromatic_clip(self, image, channel, threshold):
         image = 255. * image[0].cpu().numpy()
         image = Image.fromarray(np.clip(image, 0, 255).astype(np.uint8))
-        if channel in ["red", "green", "blue"]:
-            image = image.getchannel(channel[0].upper())
+        c = channel[0].upper()
+        if channel in ["red", "green", "blue"] and c in image.getbands():
+            image = image.getchannel(c)
         image = ImageOps.grayscale(image)
         image = image.convert("L").point(lambda x: 255 if x > threshold else 0, mode="1")
         image = image.convert("RGB")
