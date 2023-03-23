@@ -39,7 +39,6 @@ class ImageToMask:
             mask = torch.from_numpy(mask)
         # greyscale
         elif channel == "greyscale":
-            print(ImageOps.grayscale(i).getbands())
             mask = np.array(ImageOps.grayscale(i).getchannel("L")).astype(np.float32) / 255.0
             mask = 1. - torch.from_numpy(mask)
         # mask everything
