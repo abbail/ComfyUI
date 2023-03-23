@@ -17,7 +17,6 @@ class ImageToMask:
     RETURN_TYPES = ("MASK",)
     FUNCTION = "image_to_mask"
     
-    OUTPUT_NODE = True
     CATEGORY = "image"
 
     def image_to_mask(self, image, channel):
@@ -25,9 +24,12 @@ class ImageToMask:
         i = Image.fromarray(np.clip(raw_image, 0, 255).astype(np.uint8))
         mask = None
         # r,g,b
+        c = channel[0].upper()
         if channel in ["red", "green", "blue"]:
-            c = channel[0].upper()
-            mask = np.array(i.getchannel(c)).astype(np.float32) / 255.0
+            if c in image.getbands():
+                mask = np.array(i.getchannel(c)).astype(np.float32) / 255.0
+            else: # image isn't RGB, use greyscale
+                mask = np.array(ImageOps.grayscale(i).getchannel("L")).astype(np.float32) / 255.0
             mask = torch.from_numpy(mask)
         # black or white
         elif channel == "black only" or channel == "white only":
