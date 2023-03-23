@@ -1,3 +1,5 @@
+import torch
+
 class InvertMask:
     channels = ["red", "green", "blue", "greyscale", "black only", "white only", "mask everything", "mask nothing"]
 
@@ -15,7 +17,8 @@ class InvertMask:
     CATEGORY = "image"
 
     def invert_mask(self, mask):
-        mask = ~mask
+        mask = torch.sub(mask, 1)
+        mask = torch.mul(mask, -1)
         return (mask,)
 
 NODE_CLASS_MAPPINGS = {
