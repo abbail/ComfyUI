@@ -26,7 +26,7 @@ class ImageToMask:
         # r,g,b
         c = channel[0].upper()
         if channel in ["red", "green", "blue"]:
-            if c in image.getbands():
+            if c in i.getbands():
                 mask = np.array(i.getchannel(c)).astype(np.float32) / 255.0
             else: # image isn't RGB, use greyscale
                 mask = np.array(ImageOps.grayscale(i).getchannel("L")).astype(np.float32) / 255.0
