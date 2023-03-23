@@ -24,8 +24,8 @@ class ImageToMask:
         i = Image.fromarray(np.clip(raw_image, 0, 255).astype(np.uint8))
         mask = None
         # r,g,b
-        c = channel[0].upper()
         if channel in ["red", "green", "blue"]:
+            c = channel[0].upper()
             if c in i.getbands():
                 mask = np.array(i.getchannel(c)).astype(np.float32) / 255.0
             else: # image isn't RGB, use greyscale
