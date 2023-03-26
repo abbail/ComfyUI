@@ -4,7 +4,7 @@ from PIL import Image, ImageOps
 
 class MonochromaticClip:
     channels = ["red", "green", "blue", "greyscale"]
-
+    modes = ["binary", "inverse binary", "to zero", "inverse to zero", "truncate", "inverse truncate"]
     @classmethod
     def INPUT_TYPES(s):
         return {
@@ -17,6 +17,7 @@ class MonochromaticClip:
                     "max": 255,
                     "step": 1
                 }),
+                "mode": (s.modes, {"default": "binary"})
             },
         }
 
@@ -25,14 +26,26 @@ class MonochromaticClip:
 
     CATEGORY = "image"
 
-    def monochromatic_clip(self, image, channel, threshold):
+    def monochromatic_clip(self, image, channel, mode, threshold):
         image = 255. * image[0].cpu().numpy()
         image = Image.fromarray(np.clip(image, 0, 255).astype(np.uint8))
         c = channel[0].upper()
         if channel in ["red", "green", "blue"] and c in image.getbands():
             image = image.getchannel(c)
         image = ImageOps.grayscale(image)
-        image = image.convert("L").point(lambda x: 255 if x > threshold else 0, mode="1")
+        if mode == "binary":
+            filter = lambda x: 255 if x > threshold else 0
+        elif mode == "inverse binary":
+            filter = lambda x: 0 if x > threshold else 255
+        elif mode == "to zero":
+            filter = lambda x: x if x > threshold else 0
+        elif mode == "inverse to zero":
+            filter = lambda x: 0 if x > threshold else x
+        elif mode == "truncate":
+            filter = lambda x: threshold if x > threshold else x
+        else:
+            filter = lambda x: x if x > threshold else threshold
+        image = image.convert("L").point(filter, mode="L")
         image = image.convert("RGB")
         image = np.array(image).astype(np.float32) / 255.0
         image = torch.from_numpy(image)[None,]
