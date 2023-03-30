@@ -6,3 +6,4 @@ input/
 models/
 temp/
 extra_model_paths.yaml
+custom_nodes/*.zip
