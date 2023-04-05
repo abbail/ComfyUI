@@ -24,6 +24,7 @@ This ui will let you design and execute advanced stable diffusion pipelines usin
 - [Inpainting](https://comfyanonymous.github.io/ComfyUI_examples/inpaint/) with both regular and inpainting models.
 - [ControlNet and T2I-Adapter](https://comfyanonymous.github.io/ComfyUI_examples/controlnet/)
 - [Upscale Models (ESRGAN, ESRGAN variants, SwinIR, Swin2SR, etc...)](https://comfyanonymous.github.io/ComfyUI_examples/upscale_models/)
+- [unCLIP Models](https://comfyanonymous.github.io/ComfyUI_examples/unclip/)
 - Starts up very fast.
 - Works fully offline: will never download anything.
 - [Config file](extra_model_paths.yaml.example) to set the search paths for models.
@@ -44,6 +45,10 @@ There is a portable standalone build for Windows that should work for running on
 ### [Direct link to download](https://github.com/comfyanonymous/ComfyUI/releases/download/latest/ComfyUI_windows_portable_nvidia_cu118_or_cpu.7z)
 
 Just download, extract and run. Make sure you put your Stable Diffusion checkpoints/models (the huge ckpt/safetensors files) in: ComfyUI\models\checkpoints
+
+#### How do I share models between another UI and ComfyUI?
+
+See the [Config file](extra_model_paths.yaml.example) to set the search paths for models. In the standalone windows build you can find this file in the ComfyUI directory. Rename this file to extra_model_paths.yaml and edit it with your favorite text editor.
 
 ## Colab Notebook
 
@@ -101,7 +106,6 @@ With Powershell: ```"path_to_other_sd_gui\venv\Scripts\Activate.ps1"```
 With cmd.exe: ```"path_to_other_sd_gui\venv\Scripts\activate.bat"```
 
 And then you can use that terminal to run Comfyui without installing any dependencies. Note that the venv folder might be called something else depending on the SD UI.
-
 
 # Running
 

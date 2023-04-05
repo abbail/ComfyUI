@@ -5,10 +5,20 @@ import { defaultGraph } from "./defaultGraph.js";
 import { getPngMetadata, importA1111 } from "./pnginfo.js";
 
 class ComfyApp {
+	/** 
+	 * List of {number, batchCount} entries to queue
+	 */
+	#queueItems = [];
+	/**
+	 * If the queue is currently being processed
+	 */
+	#processingQueue = false;
+
 	constructor() {
 		this.ui = new ComfyUI(this);
 		this.extensions = [];
 		this.nodeOutputs = {};
+		this.shiftDown = false;
 	}
 
 	/**
@@ -617,6 +627,10 @@ class ComfyApp {
 
 		api.addEventListener("executed", ({ detail }) => {
 			this.nodeOutputs[detail.node] = detail.output;
+			const node = this.graph.getNodeById(detail.node);
+			if (node?.onExecuted) {
+				node.onExecuted(detail.output);
+			}
 		});
 
 		api.init();
@@ -624,10 +638,15 @@ class ComfyApp {
 
 	#addKeyboardHandler() {
 		window.addEventListener("keydown", (e) => {
+			this.shiftDown = e.shiftKey;
+
 			// Queue prompt using ctrl or command + enter
 			if ((e.ctrlKey || e.metaKey) && (e.key === "Enter" || e.keyCode === 13 || e.keyCode === 10)) {
 				this.queuePrompt(e.shiftKey ? -1 : 0);
 			}
+		});
+		window.addEventListener("keyup", (e) => {
+			this.shiftDown = e.shiftKey;
 		});
 	}
 
@@ -662,6 +681,9 @@ class ComfyApp {
 		this.graph = new LGraph();
 		const canvas = (this.canvas = new LGraphCanvas(canvasEl, this.graph));
 		this.ctx = canvasEl.getContext("2d");
+
+		LiteGraph.release_link_on_empty_shows_menu = true;
+		LiteGraph.alt_drag_do_clone_nodes = true;
 
 		this.graph.start();
 
@@ -739,18 +761,22 @@ class ComfyApp {
 						const inputData = inputs[inputName];
 						const type = inputData[0];
 
-						if (Array.isArray(type)) {
-							// Enums
-							Object.assign(config, widgets.COMBO(this, inputName, inputData, app) || {});
-						} else if (`${type}:${inputName}` in widgets) {
-							// Support custom widgets by Type:Name
-							Object.assign(config, widgets[`${type}:${inputName}`](this, inputName, inputData, app) || {});
-						} else if (type in widgets) {
-							// Standard type widgets
-							Object.assign(config, widgets[type](this, inputName, inputData, app) || {});
-						} else {
-							// Node connection inputs
+						if(inputData[1]?.forceInput) {
 							this.addInput(inputName, type);
+						} else {
+							if (Array.isArray(type)) {
+								// Enums
+								Object.assign(config, widgets.COMBO(this, inputName, inputData, app) || {});
+							} else if (`${type}:${inputName}` in widgets) {
+								// Support custom widgets by Type:Name
+								Object.assign(config, widgets[`${type}:${inputName}`](this, inputName, inputData, app) || {});
+							} else if (type in widgets) {
+								// Standard type widgets
+								Object.assign(config, widgets[type](this, inputName, inputData, app) || {});
+							} else {
+								// Node connection inputs
+								this.addInput(inputName, type);
+							}
 						}
 					}
 
@@ -794,7 +820,7 @@ class ComfyApp {
 		this.clean();
 
 		if (!graphData) {
-			graphData = defaultGraph;
+			graphData = structuredClone(defaultGraph);
 		}
 
 		// Patch T2IAdapterLoader to ControlNetLoader since they are the same node now
@@ -907,31 +933,47 @@ class ComfyApp {
 	}
 
 	async queuePrompt(number, batchCount = 1) {
-		for (let i = 0; i < batchCount; i++) {
-			const p = await this.graphToPrompt();
+		this.#queueItems.push({ number, batchCount });
 
-			try {
-				await api.queuePrompt(number, p);
-			} catch (error) {
-				this.ui.dialog.show(error.response || error.toString());
-				return;
-			}
+		// Only have one action process the items so each one gets a unique seed correctly
+		if (this.#processingQueue) {
+			return;
+		}
+	
+		this.#processingQueue = true;
+		try {
+			while (this.#queueItems.length) {
+				({ number, batchCount } = this.#queueItems.pop());
 
-			for (const n of p.workflow.nodes) {
-				const node = graph.getNodeById(n.id);
-				if (node.widgets) {
-					for (const widget of node.widgets) {
-						// Allow widgets to run callbacks after a prompt has been queued
-						// e.g. random seed after every gen
-						if (widget.afterQueued) {
-							widget.afterQueued();
+				for (let i = 0; i < batchCount; i++) {
+					const p = await this.graphToPrompt();
+
+					try {
+						await api.queuePrompt(number, p);
+					} catch (error) {
+						this.ui.dialog.show(error.response || error.toString());
+						break;
+					}
+
+					for (const n of p.workflow.nodes) {
+						const node = graph.getNodeById(n.id);
+						if (node.widgets) {
+							for (const widget of node.widgets) {
+								// Allow widgets to run callbacks after a prompt has been queued
+								// e.g. random seed after every gen
+								if (widget.afterQueued) {
+									widget.afterQueued();
+								}
+							}
 						}
 					}
+
+					this.canvas.draw(true, true);
+					await this.ui.queue.update();
 				}
 			}
-
-			this.canvas.draw(true, true);
-			await this.ui.queue.update();
+		} finally {
+			this.#processingQueue = false;
 		}
 	}
 
